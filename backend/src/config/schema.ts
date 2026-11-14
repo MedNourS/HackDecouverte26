@@ -7,6 +7,7 @@ export const users = pgTable("users", {
   fullName: text("full_name").notNull(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
+  schoolCycleDays: integer("school_cycle_days").default(5).notNull()
 });
 
 export const events = pgTable("events", {
@@ -57,4 +58,18 @@ export const classesEvents = pgTable("classes_events", {
   eventId: integer("event_id").references(() => events.id),
 }, (table) => [
   primaryKey({ columns: [table.classId, table.eventId] })
+]);
+
+export const timeBlocks = pgTable("time_blocks", {
+  id: serial("id").primaryKey(),
+  dayInCycle: integer("day_in_cycle").notNull(),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time").notNull(),
+});
+
+export const classesTimeBlocks = pgTable("classes_time_blocks", {
+  classId: integer("class_id").references(() => classes.id),
+  timeBlockId: integer("time_block_id").references(() => timeBlocks.id),
+}, (table) => [
+  primaryKey({ columns: [table.classId, table.timeBlockId] })
 ]);
