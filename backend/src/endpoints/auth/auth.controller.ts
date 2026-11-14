@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { defineRoute } from "@mednours/backon";
 import * as service from "./auth.services";
-import constants from "#config/constants";
+import constants from "../../config/constants";
 import { setSignedCookie, getSignedCookie, deleteCookie } from "hono/cookie";
 
 export const getMe = defineRoute({}, async (c, {}) => {

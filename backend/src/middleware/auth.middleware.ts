@@ -1,5 +1,5 @@
 import { getSignedCookie } from "hono/cookie";
-import constants from "#config/constants";
+import constants from "../config/constants";
 import { getMe } from "../endpoints/auth/auth.services";
 import type { Next } from "@mednours/backon";
 import type { BackonContext } from "@mednours/backon";
