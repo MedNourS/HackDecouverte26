@@ -30,9 +30,10 @@ export default function CreateEventDialog({
   initialEndTime = "2026-11-14T10:00",
   courses = [{ value: "Linear Algebra (CSM-406)", label: "Linear Algebra"}],
   onCreate,
+  defaultCourse = ""
 }) {
   const [isPublic, setIsPublic] = useState(true);
-  const [selectedCourse, setSelectedCourse] = useState("");
+  const [selectedCourse, setSelectedCourse] = useState(defaultCourse);
 
   const [startTime, setStartTime] = useState(initialStartTime);
   const [endTime, setEndTime] = useState(initialEndTime);

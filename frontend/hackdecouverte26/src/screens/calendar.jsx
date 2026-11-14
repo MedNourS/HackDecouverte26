@@ -7,7 +7,12 @@ import { Button } from "@/components/ui/button"
 export default function CalendarScreen({ inputEvents }) {
   const [date, setDate] = useState(() => new Date())
   const [events, setEvents] = useState(inputEvents)
+  
+  // Event that was clicked: open your dialog to show/edit it.
   const [selected, setSelected] = useState(null)
+  
+  // Times from a confirmed draft ({ start, end }): open your dialog with these as defaults.
+  const [newEvent, setNewEvent] = useState(null)
 
   const deleteSelected = () => {
     setEvents((current) => current.filter((event) => event.id !== selected.id))
@@ -33,8 +38,17 @@ export default function CalendarScreen({ inputEvents }) {
 
       {/* The scrolling container lives outside DayView */}
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <DayView date={date} events={events} onEventClick={setSelected} />
+        <DayView
+          date={date}
+          events={events}
+          onEventClick={setSelected}
+          onCreateEvent={setNewEvent}
+        />
       </div>
+
+      {/* Your dialog goes here, e.g.:
+          <EventDialog event={selected} onClose={() => setSelected(null)} />
+          <EventDialog defaults={newEvent} onClose={() => setNewEvent(null)} /> */}
     </main>
   )
 }

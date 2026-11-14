@@ -1,6 +1,7 @@
 import { format } from "date-fns"
 
 import { cn } from "@/lib/utils"
+
 import { pxPerMinute } from "./constants"
 
 const EVENT_COLORS = {
@@ -17,8 +18,10 @@ const EVENT_COLORS = {
  * event: { id, title, start: Date, end: Date, color?, description? }
  * start, end: minutes from the top of the grid
  * column, columns: which side-by-side column it sits in, out of how many
+ *
+ * Clicks are handled by the grid in DayView, which finds the event through data-event-id.
  */
-export default function DayEvent({ event, start, end, column, columns, onClick }) {
+export default function DayEvent({ event, start, end, column, columns }) {
   const pixelHeight = Math.max((end - start) * pxPerMinute, 20)
   const compact = pixelHeight < 40
 
@@ -28,10 +31,7 @@ export default function DayEvent({ event, start, end, column, columns, onClick }
   return (
     <button
       type="button"
-      onClick={(e) => {
-        e.stopPropagation()
-        onClick?.(event)
-      }}
+      data-event-id={event.id}
       className={cn(
         "absolute flex flex-col items-stretch overflow-hidden rounded-md border-l-4 px-2 text-left text-xs shadow-sm transition hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
         compact ? "justify-center py-0" : "justify-start py-1",

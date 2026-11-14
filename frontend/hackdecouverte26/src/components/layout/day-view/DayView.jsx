@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { isSameDay, startOfDay, differenceInMinutes } from "date-fns"
+import { addMinutes, isSameDay, startOfDay, differenceInMinutes } from "date-fns"
 
 import { cn } from "@/lib/utils"
 
-import { MINUTES_IN_DAY, START_HOUR, START_MINUTE, hourHeight } from "./constants"
+import { MINUTES_IN_DAY, START_HOUR, START_MINUTE, hourHeight, pxPerMinute } from "./constants"
+import NewEvent from "./NewEvent"
 import CurrentTimeLine from "./CurrentTimeLine"
 import DayContainer from "./DayContainer"
 import DayEvent from "./DayEvent"
@@ -73,12 +74,18 @@ function getScrollParent(element) {
  *
  * date: the day to show (defaults to today).
  * events: [{ id, title, start: Date, end: Date, color?: "blue" | "green" | "red" | "amber" | "violet", description? }]
+ *
+ * Clicking the grid:
+ * - on an event: calls onEventClick(event)
+ * - on an empty spot: shows a resizable draft event (BlockEvent). Confirming it calls
+ *   onCreateEvent({ start: Date, end: Date }) with the chosen times.
  */
 export function DayView({
   date: dateProp,
   events = [],
   scrollToHour,
   onEventClick,
+  onCreateEvent,
   className,
 }) {
   const headerRef = useRef(null)
@@ -118,11 +125,55 @@ export function DayView({
 
   const laidOut = useMemo(() => layoutEvents(events, dayKey), [events, dayKey])
 
+  // The draft event shown after clicking an empty spot. Times are minutes since midnight.
+  // It belongs to one day, so it disappears when you switch days.
+  const [draft, setDraft] = useState(null)
+  const activeDraft = draft?.dayKey === dayKey ? draft : null
+
+  // Escape removes the draft.
+  useEffect(() => {
+    if (!activeDraft) return
+    const onKeyDown = (e) => e.key === "Escape" && setDraft(null)
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [activeDraft])
+
+  // One click handler for the whole grid: it checks what was clicked.
+  const handleGridClick = (e) => {
+    // Clicks on the draft's block, handles or buttons are handled by BlockEvent itself.
+    if (e.target.closest("[data-block-event]")) return
+
+    // Clicked an event: open it.
+    const eventElement = e.target.closest("[data-event-id]")
+    if (eventElement) {
+      //match the event element to the event
+      const event = events.find((ev) => String(ev.id) === eventElement.dataset.eventId)
+
+      //if the draft was previously open -> close it
+      setDraft(null)
+
+      if (event) onEventClick?.(event)
+      return
+    }
+
+    // Clicked an empty spot: put a 1-hour draft there, starting on the 15 minutes clicked.
+    const y = e.clientY - e.currentTarget.getBoundingClientRect().top
+    const clicked = START_MINUTE + Math.floor(y / pxPerMinute / 15) * 15
+    const startTime = Math.min(clicked, MINUTES_IN_DAY - 60)
+
+    setDraft({ id: Date.now(), dayKey, startTime, endTime: startTime + 60 })
+  }
+
+  const handleConfirm = ({ startTime, endTime }) => {
+    setDraft(null)
+    onCreateEvent?.({ start: addMinutes(dayKey, startTime), end: addMinutes(dayKey, endTime) })
+  }
+
   return (
     <div className={cn("flex flex-col bg-card text-card-foreground", className)}>
       <DayHeader ref={headerRef} date={date} />
 
-      <DayContainer gridRef={gridRef}>
+      <DayContainer gridRef={gridRef} onGridClick={handleGridClick}>
 
         {/* FOR DECLAN -> UNDERSTAND THE FUCTION GOOD LUCK ! */}
         {laidOut.map(({ event, start, end, column, columns }) => (
@@ -133,11 +184,22 @@ export function DayView({
             end={end}
             column={column}
             columns={columns}
-            onClick={onEventClick}
           />
         ))}
 
         {isToday && <CurrentTimeLine now={now} />}
+
+        {activeDraft && (
+          <NewEvent
+            key={activeDraft.id}
+            startTime={activeDraft.startTime}
+            endTime={activeDraft.endTime}
+            dayStart={START_MINUTE}
+            dayEnd={MINUTES_IN_DAY}
+            onConfirm={handleConfirm}
+            onCancel={() => setDraft(null)}
+          />
+        )}
       </DayContainer>
     </div>
   )
