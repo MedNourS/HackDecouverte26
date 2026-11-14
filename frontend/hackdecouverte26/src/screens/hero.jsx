@@ -109,7 +109,7 @@ export default function HeroScreen({ loginHref = "/login" }) {
 
           <Link href={loginHref} className={cn(buttonVariants({ size: "lg" }), "h-11 px-6 text-sm")}>
             Log in
-          <Link/>
+          </Link>
         </div>
 
         <div className="flex justify-center lg:justify-end">

@@ -4,7 +4,9 @@ import { addDays } from "date-fns"
 import { DayView } from "@/components/layout/day-view/DayView"
 import { Button } from "@/components/ui/button"
 
-export default function CalendarScreen({ inputEvents }) {
+export default function CalendarScreen() {
+  const { events: inputEvents } = useLoaderData();
+  
   const [date, setDate] = useState(() => new Date())
   const [events, setEvents] = useState(inputEvents)
   
