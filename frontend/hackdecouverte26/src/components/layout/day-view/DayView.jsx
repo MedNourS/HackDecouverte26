@@ -24,8 +24,18 @@ const EVENT_COLORS = {
 function layoutEvents(events, dayStart) {
   const items = events
     .map((event) => {
-      const start = Math.max(0, differenceInMinutes(event.start, dayStart))
-      const end = Math.min(MINUTES_IN_DAY, differenceInMinutes(event.end, dayStart))
+      const START_HOUR = 6 // Example: calendar starts at 6 AM
+      const START_MINUTE = START_HOUR * 60
+
+      const start = Math.max(
+        0,
+        differenceInMinutes(event.start, dayStart) - START_MINUTE
+      )
+
+      const end = Math.min(
+        MINUTES_IN_DAY - START_MINUTE,
+        differenceInMinutes(event.end, dayStart) - START_MINUTE
+      )
       return { event, start, end }
     })
     .filter((item) => item.end > item.start)

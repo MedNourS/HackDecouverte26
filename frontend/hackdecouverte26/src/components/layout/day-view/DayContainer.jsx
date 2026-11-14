@@ -1,10 +1,10 @@
-import { hourHeight } from "./constants"
+import { HOURS, hourHeight } from "./constants"
 import HourLabels from "./HourLabels"
 import HourLines from "./HourLines"
 
 export default function DayContainer({ gridRef, children }) {
   return (
-    <div className="relative flex" style={{ height: hourHeight * 24 }}>
+    <div className="relative flex" style={{ height: hourHeight * HOURS.length }}>
       <HourLabels />
 
       {/* Grid and events */}
