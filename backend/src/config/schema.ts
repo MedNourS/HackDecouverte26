@@ -1,4 +1,6 @@
-import { pgTable, serial, text, integer, timestamp, primaryKey } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { check } from "drizzle-orm/mysql-core";
+import { pgTable, serial, text, integer, time, timestamp, primaryKey } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -16,7 +18,9 @@ export const events = pgTable("events", {
   description: text("description").notNull(),
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date"),
-});
+}, (table) => [
+  check("timestamps_chec", sql`${table.startDate} < ${table.endDate}`)
+]);
 
 export const courses = pgTable("courses", {
   id: serial("id").primaryKey(),
@@ -63,8 +67,8 @@ export const classesEvents = pgTable("classes_events", {
 export const timeBlocks = pgTable("time_blocks", {
   id: serial("id").primaryKey(),
   dayInCycle: integer("day_in_cycle").notNull(),
-  startTime: timestamp("start_time").notNull(),
-  endTime: timestamp("end_time").notNull(),
+  startTime: time("start_time").notNull(),
+  endTime: time("end_time").notNull(),
 });
 
 export const classesTimeBlocks = pgTable("classes_time_blocks", {
