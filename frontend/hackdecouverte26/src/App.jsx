@@ -1,3 +1,4 @@
+import CreateEventDialog from "./components/layout/create-event"
 import CalendarScreen from "./screens/calendar"
 import { addDays } from "date-fns"
 
@@ -24,6 +25,7 @@ const SAMPLE_EVENTS = [
 
 export default function App() {
   return (
-    <CalendarScreen inputEvents={SAMPLE_EVENTS} />
+    // <CalendarScreen inputEvents={SAMPLE_EVENTS} />
+    <CreateEventDialog />
   )
 }
