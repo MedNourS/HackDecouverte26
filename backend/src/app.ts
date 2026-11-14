@@ -1,26 +1,31 @@
-// Vercel's build scans for this import to detect a Hono app — see vercel.json.
-import "hono";
+import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { createApp, serveApiDocs } from "@mednours/backon";
 import { endpoints } from "./endpoints";
 import { exampleMiddleware } from "./middleware/example.middleware";
-import { cors } from "hono/cors";
 
-export const app = createApp();
+const ALLOWED_ORIGINS = [
+  "http://localhost:5173",
+  "https://your-frontend.vercel.app",
+];
 
+const api = createApp({ allowedOrigins: ALLOWED_ORIGINS });
+api.use("*", exampleMiddleware);
+api.route("/", endpoints);
+serveApiDocs(api, "/docs", { title: "backend" });
+
+// Outer app: CORS with credentials, so the browser accepts the login cookie.
+// backon's own CORS can't send Access-Control-Allow-Credentials.
+export const app = new Hono();
 app.use(
   "*",
   cors({
-    origin: "http://localhost:5174",
+    origin: ALLOWED_ORIGINS,
     credentials: true,
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization", "Access-Control-Allow-Origin"],
-    
+    allowHeaders: ["Content-Type", "Authorization"],
   }),
 );
-app.use("*", exampleMiddleware);
-app.route("/", endpoints);
+app.route("/", api);
 
-serveApiDocs(app, "/docs", { title: "backend" });
-
-// Vercel deploys straight from this export — see vercel.json.
 export default app;

@@ -7,9 +7,8 @@ import HeroScreen from "./screens/hero.jsx"
 import LoginScreen from "./screens/login.jsx"
 import SignupScreen from "./screens/singup.jsx"
 
-// Backend address. "/api" goes through the Vite proxy (vite.config.js) in development
-// and the vercel.json rewrite in production, so the browser never makes a cross-origin request.
-const API_URL = "https://hack-decouverte26.vercel.app"
+// Backend address. Set VITE_API_URL in .env (e.g. the deployed backend URL) to change it.
+const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000"
 
 // Makes a Date for `daysFromToday` days from now, at hour:minute.
 function at(daysFromToday, hour, minute = 0) {
@@ -51,12 +50,13 @@ export default function App() {
 }
 
 /**
- * Asks the backend who is logged in (from the session cookie).
+ * Asks the backend who is logged in (the `sub` from /auth/me).
  * Returns the user id, or null if nobody is logged in.
  */
 async function getCurrentUserId(signal) {
   const res = await fetch(`${API_URL}/auth/me`, { signal, credentials: "include" })
   if (!res.ok) return null
+  
   const me = await res.json()
   return me?.sub ?? null
 }
@@ -69,7 +69,10 @@ async function loadEvents({ request }) {
   const userId = await getCurrentUserId(request.signal)
   if (userId == null) return redirect("/login")
 
-  const res = await fetch(`${API_URL}/user-events/user/${userId}`, { signal: request.signal, credentials: "include" })
+  const res = await fetch(`${API_URL}/user-events/user/${userId}`, {
+    signal: request.signal,
+    credentials: "include",
+  })
 
   // The endpoint doesn't exist on the backend yet: use the sample events while developing.
   // Remove this once GET /user-events/user/:userId is deployed.
@@ -114,7 +117,7 @@ async function loginAction({ request }) {
   if (!res) return { error: "Couldn't reach the server. Try again." }
   if (!res.ok) return { error: "Wrong email or password." }
 
-  // Login sets a session cookie. Check it worked before going to the calendar.
+  // Check the login worked before going to the calendar.
   const id = await getCurrentUserId(request.signal)
   if (id == null) return { error: "Logged in, but couldn't load your account. Try again." }
 
