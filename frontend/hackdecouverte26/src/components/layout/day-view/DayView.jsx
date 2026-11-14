@@ -324,7 +324,7 @@ export function DayView({
                   width: `calc(${100 / columns}% - 4px)`,
                 }}
               >
-                <div className="font-medium">
+                <div className="font-large">
                   {event.title}
                 </div>
 
@@ -334,6 +334,10 @@ export function DayView({
                     {format(event.end, "h:mm a")}
                   </div>
                 )}
+
+                <div>
+                  {event.description}
+                </div>
               </button>
             );
           }
