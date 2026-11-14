@@ -7,8 +7,9 @@ import HeroScreen from "./screens/hero.jsx"
 import LoginScreen from "./screens/login.jsx"
 import SignupScreen from "./screens/singup.jsx"
 
-// Backend address. Set VITE_API_URL in a .env file to change it.
-const API_URL = import.meta.env.VITE_API_URL ?? "https://hack-decouverte26.vercel.app"
+// Backend address. "/api" goes through the Vite proxy (vite.config.js) in development
+// and the vercel.json rewrite in production, so the browser never makes a cross-origin request.
+const API_URL = "https://hack-decouverte26.vercel.app"
 
 // Makes a Date for `daysFromToday` days from now, at hour:minute.
 function at(daysFromToday, hour, minute = 0) {
@@ -37,7 +38,7 @@ const router = createBrowserRouter([
   { path: "/login", element: <LoginScreen />, action: loginAction },
   { path: "/signup", element: <SignupScreen />, action: signupAction },
   {
-    path: "/calendar/:userId",
+    path: "/calendar",
     element: <CalendarScreen />,
     loader: loadEvents,
     errorElement: <RouteError />,
@@ -50,12 +51,23 @@ export default function App() {
 }
 
 /**
- * Loads the user's events before /calendar/:userId shows.
+ * Asks the backend who is logged in (from the session cookie).
+ * Returns the user id, or null if nobody is logged in.
+ */
+async function getCurrentUserId(signal) {
+  const res = await fetch(`${API_URL}/auth/me`, { signal, credentials: "include" })
+  if (!res.ok) return null
+  const me = await res.json()
+  return me?.sub ?? null
+}
+
+/**
+ * Loads the logged-in user's events before /calendar shows.
  * CalendarScreen reads them with useLoaderData().events.
  */
-async function loadEvents({ params, request }) {
-  const userId = Number(params.userId)
-  if (!Number.isInteger(userId)) throw new Response("Unknown user", { status: 404 })
+async function loadEvents({ request }) {
+  const userId = await getCurrentUserId(request.signal)
+  if (userId == null) return redirect("/login")
 
   const res = await fetch(`${API_URL}/user-events/user/${userId}`, { signal: request.signal, credentials: "include" })
 
@@ -102,15 +114,11 @@ async function loginAction({ request }) {
   if (!res) return { error: "Couldn't reach the server. Try again." }
   if (!res.ok) return { error: "Wrong email or password." }
 
-  const data = await res.json()
-  // Adjust to match what the backend sends (see the console.log above).
-  const id = data?.id ?? data?.user?.id ?? data?.userId ?? data?.[0]?.id
-  if (id == null) {
-    console.error("Login response has no user id:", data)
-    return { error: "Logged in, but couldn't find your account. Try again." }
-  }
+  // Login sets a session cookie. Check it worked before going to the calendar.
+  const id = await getCurrentUserId(request.signal)
+  if (id == null) return { error: "Logged in, but couldn't load your account. Try again." }
 
-  return redirect(`/calendar/${id}`)
+  return redirect("/calendar")
 }
 
 async function signupAction({ request }) {
@@ -133,6 +141,7 @@ async function postJson(path, body) {
   try {
     return await fetch(`${API_URL}${path}`, {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     })

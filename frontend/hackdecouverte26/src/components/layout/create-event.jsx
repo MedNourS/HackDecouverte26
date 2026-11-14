@@ -1,13 +1,14 @@
+
 "use client";
+
+import { useEffect, useState } from "react";
 
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
-  DialogClose,
 } from "@/components/ui/dialog";
 
 import { Input } from "@/components/ui/input";
@@ -23,15 +24,39 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { useState } from "react";
+function toLocalDateTime(value) {
+  if (!value) return "";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return "";
+
+  const offset = date.getTimezoneOffset() * 60000;
+
+  return new Date(date.getTime() - offset)
+    .toISOString()
+    .slice(0, 16);
+}
 
 export default function CreateEventDialog({
+  open,
+  onOpenChange,
+  initialEvent = null,
   initialStartTime = "2026-11-14T09:00",
   initialEndTime = "2026-11-14T10:00",
-  courses = [{ value: "Linear Algebra (CSM-406)", label: "Linear Algebra"}],
+  courses = [
+    {
+      value: "Linear Algebra (CSM-406)",
+      label: "Linear Algebra",
+    },
+  ],
   onCreate,
+  onUpdate,
+  onDelete,
   defaultCourse = ""
 }) {
+  const isEditing = Boolean(initialEvent);
+
   const [isPublic, setIsPublic] = useState(true);
   const [selectedCourse, setSelectedCourse] = useState(defaultCourse);
 
@@ -41,34 +66,99 @@ export default function CreateEventDialog({
   const [eventName, setEventName] = useState("");
   const [description, setDescription] = useState("");
 
+  // Populate the form whenever the dialog opens or the selected event changes.
+  useEffect(() => {
+    if (!open) return;
+
+    if (initialEvent) {
+      setEventName(initialEvent.name ?? initialEvent.title ?? "");
+      setDescription(initialEvent.description ?? "");
+
+      setStartTime(toLocalDateTime(initialEvent.start));
+      setEndTime(toLocalDateTime(initialEvent.end));
+
+      setIsPublic(initialEvent.isPublic ?? true);
+      setSelectedCourse(initialEvent.course ?? "");
+    } else {
+      setEventName("");
+      setDescription("");
+
+      setStartTime(initialStartTime);
+      setEndTime(initialEndTime);
+
+      setIsPublic(true);
+      setSelectedCourse("");
+    }
+  }, [open, initialEvent, initialStartTime, initialEndTime]);
+
   const handleCreate = () => {
+    if (!eventName.trim()) {
+      return;
+    }
+
+    if (!startTime || !endTime) {
+      return;
+    }
+
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+
+    if (
+      Number.isNaN(start.getTime()) ||
+      Number.isNaN(end.getTime()) ||
+      end <= start
+    ) {
+      return;
+    }
+
     const eventData = {
-      name: eventName,
+      id: initialEvent?.id ?? crypto.randomUUID(),
+
+      name: eventName.trim(),
+      title: eventName.trim(),
+
       description,
-      startTime,
-      endTime,
+
+      start,
+      end,
+
       isPublic,
       course: isPublic ? selectedCourse : null,
+
+      color: initialEvent?.color ?? "blue",
     };
 
-    onCreate?.(eventData);
+    if (isEditing) {
+      onUpdate?.(eventData);
+    } else {
+      onCreate?.(eventData);
+    }
+
+    onOpenChange(false);
+  };
+
+  const handleDelete = () => {
+    if (!initialEvent) return;
+
+    onDelete?.(initialEvent.id);
+    onOpenChange(false);
   };
 
   return (
-    <Dialog>
-      <DialogTrigger className="fixed bottom-6 left-1/2 z-50 inline-flex -translate-x-1/2 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90">
-        Create Event
-      </DialogTrigger>
-
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Create Calendar Event</DialogTitle>
+          <DialogTitle>
+            {isEditing ? "Edit Calendar Event" : "Create Calendar Event"}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
+
           {/* Event name */}
           <div className="space-y-2">
             <label>Event Name</label>
+
             <Input
               placeholder="Event name..."
               value={eventName}
@@ -79,6 +169,7 @@ export default function CreateEventDialog({
           {/* Description */}
           <div className="space-y-2">
             <label>Description</label>
+
             <Textarea
               placeholder="Event description..."
               value={description}
@@ -90,6 +181,7 @@ export default function CreateEventDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label>Start Time</label>
+
               <Input
                 type="datetime-local"
                 value={startTime}
@@ -99,6 +191,7 @@ export default function CreateEventDialog({
 
             <div className="space-y-2">
               <label>End Time</label>
+
               <Input
                 type="datetime-local"
                 value={endTime}
@@ -110,6 +203,7 @@ export default function CreateEventDialog({
           {/* Public / Private */}
           <div className="flex items-center justify-between">
             <label>Public Event</label>
+
             <Switch
               checked={isPublic}
               onCheckedChange={setIsPublic}
@@ -146,18 +240,29 @@ export default function CreateEventDialog({
           </div>
         </div>
 
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline">
-              Cancel
-            </Button>
-          </DialogClose>
+        <DialogFooter className="gap-2 sm:gap-0">
 
-          <DialogClose asChild>
-            <Button onClick={handleCreate}>
-              Create Event
+          {isEditing && (
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              className="mr-auto"
+            >
+              Delete Event
             </Button>
-          </DialogClose>
+          )}
+
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
+            Cancel
+          </Button>
+
+          <Button onClick={handleCreate}>
+            {isEditing ? "Save Changes" : "Create Event"}
+          </Button>
+
         </DialogFooter>
       </DialogContent>
     </Dialog>
