@@ -3,9 +3,19 @@ import "hono";
 import { createApp, serveApiDocs } from "@mednours/backon";
 import { endpoints } from "./endpoints";
 import { exampleMiddleware } from "./middleware/example.middleware";
+import { cors } from "hono/cors";
 
 export const app = createApp();
 
+app.use(
+  "*",
+  cors({
+    origin: "http://localhost:5174",
+    credentials: true,
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowHeaders: ["Content-Type", "Authorization"],
+  }),
+);
 app.use("*", exampleMiddleware);
 app.route("/", endpoints);
 
