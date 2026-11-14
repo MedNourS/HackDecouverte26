@@ -1,10 +1,10 @@
 import * as jose from "jose";
-import constants from "#config/constants";
+import constants from "../../config/constants";
 import type { z } from "zod";
 import type { registerAccountBodySchema } from "./auth.controller";
 import type { loginAccountBodySchema } from "./auth.controller";
-import { db } from "#config/db";
-import { users } from "#config/schema";
+import { db } from "../../config/db";
+import { users } from "../../config/schema";
 import { eq } from "drizzle-orm";
 
 export async function getMe(authToken: string) {
@@ -55,7 +55,7 @@ export async function loginAccount(
     .sign(decodedSecretKey);
 }
 
-// TODO: replace with real data access — e.g. import { db } from "#config/db";
+// TODO: replace with real data access — e.g. import { db } from "../../config/db";
 export async function removeAuthToken() {
   return { success: true };
 }
