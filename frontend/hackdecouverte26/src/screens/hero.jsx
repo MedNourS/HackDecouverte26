@@ -107,7 +107,7 @@ export default function HeroScreen({ loginHref = "/login" }) {
             what’s next and who’ll be there.
           </p>
 
-          <Link href={loginHref} className={cn(buttonVariants({ size: "lg" }), "h-11 px-6 text-sm")}>
+          <Link to={loginHref} className={cn(buttonVariants({ size: "lg" }), "h-11 px-6 text-sm")}>
             Log in
           </Link>
         </div>

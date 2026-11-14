@@ -102,9 +102,15 @@ async function loginAction({ request }) {
   if (!res) return { error: "Couldn't reach the server. Try again." }
   if (!res.ok) return { error: "Wrong email or password." }
 
-  // The calendar URL needs the user's id, so it comes from the login response.
-  const user = await res.json()
-  return redirect(`/calendar/${user.id}`)
+  const data = await res.json()
+  // Adjust to match what the backend sends (see the console.log above).
+  const id = data?.id ?? data?.user?.id ?? data?.userId ?? data?.[0]?.id
+  if (id == null) {
+    console.error("Login response has no user id:", data)
+    return { error: "Logged in, but couldn't find your account. Try again." }
+  }
+
+  return redirect(`/calendar/${id}`)
 }
 
 async function signupAction({ request }) {
@@ -119,8 +125,7 @@ async function signupAction({ request }) {
   if (!res) return { error: "Couldn't reach the server. Try again." }
   if (!res.ok) return { error: "Couldn't create your account. Try again." }
 
-  const user = await res.json()
-  return redirect(`/calendar/${user.id}`)
+  return redirect("/login")
 }
 
 // POSTs JSON to the backend. Returns the Response, or null if the server can't be reached.
@@ -131,7 +136,8 @@ async function postJson(path, body) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     })
-  } catch {
+  } catch (err) {
+    console.error(`POST ${path} failed:`, err)
     return null
   }
 }
