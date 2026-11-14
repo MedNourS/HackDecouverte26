@@ -4,7 +4,7 @@ import HourLines from "./HourLines"
 
 export default function DayContainer({ gridRef, children }) {
   return (
-    <div className="relative flex" style={{ height: hourHeight * HOURS.length }}>
+    <div className="relative flex" style={{ height: HOURS.length * hourHeight }}>
       <HourLabels />
 
       {/* Grid and events */}
