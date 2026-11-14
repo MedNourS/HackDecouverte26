@@ -13,7 +13,8 @@ app.use(
     origin: "http://localhost:5174",
     credentials: true,
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization"],
+    allowHeaders: ["Content-Type", "Authorization", "Access-Control-Allow-Origin"],
+    
   }),
 );
 app.use("*", exampleMiddleware);
