@@ -1,9 +1,4 @@
-<<<<<<< HEAD
 import CalendarScreen from "./screens/calendar/calendar"
-=======
-import CreateEventDialog from "./components/layout/create-event"
-import CalendarScreen from "./screens/calendar"
->>>>>>> ed79901213d6acdf88de672f3cebccbdc38a9b87
 import { addDays } from "date-fns"
 
 // Makes a Date for `daysFromToday` days from now, at hour:minute.
@@ -29,7 +24,7 @@ const SAMPLE_EVENTS = [
 
 export default function App() {
   return (
-    // <CalendarScreen inputEvents={SAMPLE_EVENTS} />
-    <CreateEventDialog />
+    <CalendarScreen inputEvents={SAMPLE_EVENTS} />
+    //<CreateEventDialog />
   )
 }
