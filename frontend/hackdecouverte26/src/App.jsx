@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { addDays, format } from "date-fns"
 
-import { DayView } from "@/components/dv/DayView"
+import { DayView } from "@/components/layout/day-view/DayView"
 import { Button } from "@/components/ui/button"
 
 // Makes a Date for `daysFromToday` days from now, at hour:minute.
