@@ -53,11 +53,12 @@ export default function CreateEventDialog({
   onCreate,
   onUpdate,
   onDelete,
+  defaultCourse = ""
 }) {
   const isEditing = Boolean(initialEvent);
 
   const [isPublic, setIsPublic] = useState(true);
-  const [selectedCourse, setSelectedCourse] = useState("");
+  const [selectedCourse, setSelectedCourse] = useState(defaultCourse);
 
   const [startTime, setStartTime] = useState(initialStartTime);
   const [endTime, setEndTime] = useState(initialEndTime);

@@ -1,4 +1,4 @@
-import CalendarScreen from "./screens/calendar/calendar"
+import CalendarScreen from "./screens/calendar"
 import { addDays } from "date-fns"
 
 // Makes a Date for `daysFromToday` days from now, at hour:minute.

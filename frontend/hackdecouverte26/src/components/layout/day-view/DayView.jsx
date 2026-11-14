@@ -2,8 +2,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-
 import {
+  addMinutes,
   format,
   isSameDay,
   startOfDay,
@@ -14,22 +14,16 @@ import { cn } from "@/lib/utils";
 
 import {
   MINUTES_IN_DAY,
+  START_HOUR,
+  START_MINUTE,
   hourHeight,
   pxPerMinute,
 } from "./constants";
 
-
-
+import NewEvent from "./NewEvent";
 import CurrentTimeLine from "./CurrentTimeLine";
 import DayContainer from "./DayContainer";
 import DayHeader from "./DayHeader";
-
-import {
-  ContextMenu,
-  ContextMenuTrigger,
-  ContextMenuContent,
-  ContextMenuItem,
-} from "@/components/ui/context-menu";
 
 const EVENT_COLORS = {
   blue: "bg-blue-100 dark:bg-blue-950 border-blue-500 text-blue-950 dark:text-blue-100",
@@ -42,21 +36,27 @@ const EVENT_COLORS = {
 function layoutEvents(events, dayStart) {
   const items = events
     .map((event) => {
-      const start = Math.max(
-        0,
-        differenceInMinutes(event.start, dayStart)
-      );
+      const start =
+        differenceInMinutes(event.start, dayStart) -
+        START_MINUTE;
 
-      const end = Math.min(
-        MINUTES_IN_DAY,
-        differenceInMinutes(event.end, dayStart)
-      );
+      const end =
+        differenceInMinutes(event.end, dayStart) -
+        START_MINUTE;
 
-      return { event, start, end };
+      return {
+        event,
+        start: Math.max(0, start),
+        end: Math.min(
+          MINUTES_IN_DAY - START_MINUTE,
+          end
+        ),
+      };
     })
     .filter((item) => item.end > item.start)
     .sort((a, b) => a.start - b.start || b.end - a.end);
 
+  // Keep the rest of your existing column-layout logic unchanged.
   const placed = [];
 
   let cluster = [];
@@ -96,7 +96,6 @@ function layoutEvents(events, dayStart) {
     }
 
     cluster.push({ ...item, column });
-
     clusterEnd = Math.max(clusterEnd, item.end);
   }
 
@@ -126,20 +125,24 @@ export function DayView({
   events = [],
   scrollToHour,
   onEventClick,
-  onEventEdit,
-  onAddEvent,
+  onCreateEvent,
   className,
 }) {
   const headerRef = useRef(null);
   const gridRef = useRef(null);
 
   const [now, setNow] = useState(() => new Date());
+  const [draft, setDraft] = useState(null);
 
   const date = dateProp ?? now;
 
   const dayKey = startOfDay(date).getTime();
   const isToday = isSameDay(date, now);
 
+  const activeDraft =
+    draft?.dayKey === dayKey ? draft : null;
+
+  // Update the current-time indicator.
   useEffect(() => {
     const timer = setInterval(() => {
       setNow(new Date());
@@ -147,6 +150,23 @@ export function DayView({
 
     return () => clearInterval(timer);
   }, []);
+
+  // Cancel the draft when Escape is pressed.
+  useEffect(() => {
+    if (!activeDraft) return;
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setDraft(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [activeDraft]);
 
   // Scroll to the current time or 8 AM.
   useEffect(() => {
@@ -159,6 +179,8 @@ export function DayView({
       (isToday ? Math.max(0, now.getHours() - 1) : 8);
 
     const container = getScrollParent(grid);
+
+    if (!container) return;
 
     const isPage = container === document.scrollingElement;
 
@@ -176,122 +198,167 @@ export function DayView({
 
     container.scrollTop =
       gridTop + hour * hourHeight - headerHeight;
-
   }, [dayKey, scrollToHour]);
 
+  // Calculate event positions and overlapping columns.
   const laidOut = useMemo(
     () => layoutEvents(events, dayKey),
     [events, dayKey]
   );
 
-  // Clicking an empty time slot calls the parent component.
-  const handleGridClick = (e) => {
+  // Handle clicks on the calendar grid.
+  const handleGridClick = (event) => {
     const grid = gridRef.current;
 
-    if (!grid || !grid.contains(e.target)) return;
+    if (!grid) return;
 
+    // Ignore clicks inside the draft event or its controls.
+    if (event.target.closest("[data-block-event]")) {
+      return;
+    }
+
+    // If an existing event was clicked, open it.
+    const eventElement = event.target.closest("[data-event-id]");
+
+    if (eventElement) {
+      const selectedEvent = events.find(
+        (item) =>
+          String(item.id) === eventElement.dataset.eventId
+      );
+
+      if (selectedEvent) {
+        setDraft(null);
+        onEventClick?.(selectedEvent);
+      }
+
+      return;
+    }
+
+    // Calculate the clicked time relative to the calendar grid.
     const rect = grid.getBoundingClientRect();
-
-    const y = e.clientY - rect.top;
+    const y = event.clientY - rect.top;
 
     if (y < 0 || y >= MINUTES_IN_DAY * pxPerMinute) {
       return;
     }
 
-    const minutes = Math.floor(y / pxPerMinute);
+    // Round the starting time to the nearest 15-minute interval.
+    const clickedMinutes =
+      START_MINUTE +
+      Math.floor((y / pxPerMinute) / 15) * 15;
 
-    const selectedDate = new Date(dayKey);
+    // Start with a one-hour draft.
+    const startTime = Math.min(
+      clickedMinutes,
+      MINUTES_IN_DAY - 60
+    );
 
-    selectedDate.setMinutes(minutes);
-
-    onAddEvent?.(selectedDate);
+    setDraft({
+      id: Date.now(),
+      dayKey,
+      startTime,
+      endTime: startTime + 60,
+    });
   };
 
-  const handleEventClick = (event) => {
-    if (onEventEdit) {
-      onEventEdit(event);
-    } else {
-      onEventClick?.(event);
-    }
+  // Confirm the resized draft and send its times to CalendarScreen.
+  const handleConfirm = ({ startTime, endTime }) => {
+    const start = addMinutes(
+      new Date(dayKey),
+      startTime
+    );
+
+    const end = addMinutes(
+      new Date(dayKey),
+      endTime
+    );
+
+    setDraft(null);
+
+    onCreateEvent?.({ start, end });
   };
 
-  
-return (
-  <ContextMenu>
-    <ContextMenuTrigger asChild>
-      <div
-        className={cn(
-          "flex flex-col rounded-xl border bg-card text-card-foreground",
-          className
-        )}
+  return (
+    <div
+      className={cn(
+        "flex flex-col rounded-xl border bg-card text-card-foreground",
+        className
+      )}
+    >
+      <DayHeader
+        ref={headerRef}
+        date={date}
+      />
+
+      <DayContainer
+        gridRef={gridRef}
+        onGridClick={handleGridClick}
       >
-        <DayHeader ref={headerRef} date={date} />
+        {/* Existing events */}
+        {laidOut.map(
+          ({ event, start, end, column, columns }) => {
+            const pixelHeight = Math.max(
+              (end - start) * pxPerMinute,
+              20
+            );
 
-        <DayContainer gridRef={gridRef}>
-          {laidOut.map(
-            ({ event, start, end, column, columns }) => {
-              const pixelHeight = Math.max(
-                (end - start) * pxPerMinute,
-                20
-              );
+            const compact = pixelHeight < 40;
 
-              const compact = pixelHeight < 40;
+            return (
+              <button
+                key={event.id}
+                type="button"
+                data-event-id={event.id}
+                className={cn(
+                  "absolute flex flex-col items-stretch overflow-hidden rounded-md border-l-4 px-2 text-left text-xs shadow-sm transition hover:brightness-95",
+                  compact
+                    ? "justify-center py-0"
+                    : "justify-start py-1",
+                  EVENT_COLORS[event.color] ??
+                    EVENT_COLORS.blue
+                )}
+                style={{
+                  top: start * pxPerMinute,
+                  height: pixelHeight - 2,
+                  left: `calc(${(column / columns) * 100}% + 2px)`,
+                  width: `calc(${100 / columns}% - 4px)`,
+                }}
+              >
+                <div className="font-medium">
+                  {event.title}
+                </div>
 
-              return (
-                <button
-                  key={event.id}
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleEventClick(event);
-                  }}
-                  onContextMenu={(e) => e.stopPropagation()}
-                  className={cn(
-                    "absolute flex flex-col items-stretch overflow-hidden rounded-md border-l-4 px-2 text-left text-xs shadow-sm transition hover:brightness-95",
-                    compact ? "justify-center py-0" : "justify-start py-1",
-                    EVENT_COLORS[event.color] ?? EVENT_COLORS.blue
-                  )}
-                  style={{
-                    top: start * pxPerMinute,
-                    height: pixelHeight - 2,
-                    left: `calc(${(column / columns) * 100}% + 2px)`,
-                    width: `calc(${100 / columns}% - 4px)`,
-                  }}
-                >
-                  <div className="font-medium">
-                    {event.title}
+                {!compact && (
+                  <div className="opacity-70">
+                    {format(event.start, "h:mm a")} –{" "}
+                    {format(event.end, "h:mm a")}
                   </div>
+                )}
+              </button>
+            );
+          }
+        )}
 
-                  {!compact && (
-                    <div className="opacity-70">
-                      {format(event.start, "h:mm a")} –{" "}
-                      {format(event.end, "h:mm a")}
-                    </div>
-                  )}
-                </button>
-              );
-            }
-          )}
+        {/* Current time indicator */}
+        {isToday && (
+          <CurrentTimeLine now={now} />
+        )}
 
-          {isToday && <CurrentTimeLine now={now} />}
-        </DayContainer>
-      </div>
-    </ContextMenuTrigger>
-
-    <ContextMenuContent>
-      <ContextMenuItem
-        onSelect={() => {
-          const selectedDate = new Date(date);
-
-          onAddEvent?.(selectedDate);
-        }}
-      >
-        Add Event
-      </ContextMenuItem>
-    </ContextMenuContent>
-  </ContextMenu>
-);
-
+        {/* Resizable draft event */}
+        {activeDraft && (
+          <NewEvent
+            key={activeDraft.id}
+            startTime={activeDraft.startTime}
+            endTime={activeDraft.endTime}
+            dayStart={START_MINUTE}
+            dayEnd={MINUTES_IN_DAY}
+            onConfirm={handleConfirm}
+            onCancel={() => setDraft(null)}
+          />
+        )}
+      </DayContainer>
+    </div>
+  );
 }
 
 export default DayView;
