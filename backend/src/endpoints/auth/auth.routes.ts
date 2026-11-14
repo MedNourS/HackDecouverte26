@@ -8,3 +8,5 @@ authRoutes.get("/me", controller.getMe);
 authRoutes.post("/register", controller.registerAccount);
 
 authRoutes.post("/login", controller.loginAccount);
+
+authRoutes.delete("/logout", controller.removeAuthToken);

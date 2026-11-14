@@ -28,10 +28,11 @@
   },
   "dependencies": {
     "@mednours/backon": "latest",
-    "hono": "^4.6.14",
-    "zod": "^3.24.1",
+    "@neondatabase/serverless": "^0.10.4",
     "drizzle-orm": "^0.38.2",
-    "@neondatabase/serverless": "^0.10.4"
+    "hono": "^4.6.14",
+    "jose": "^6.2.17",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/bun": "latest",
